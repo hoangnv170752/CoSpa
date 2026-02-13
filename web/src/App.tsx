@@ -4,7 +4,9 @@ import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from '@clerk/c
 import { MapComponent } from './components/MapComponent';
 import { ChatBubble } from './components/ChatBubble';
 import { LocationCard } from './components/LocationCard';
+import { ConversationDropdown } from './components/ConversationDropdown';
 import { sendMessageToGemini } from './services/geminiService';
+import { createConversation, getUserConversations, deleteConversation, updateConversationTitle, getConversationMessages, Conversation } from './services/conversationService';
 import { Message, LocationData, Coordinates } from './types';
 import 'leaflet/dist/leaflet.css';
 
@@ -30,6 +32,13 @@ function App() {
   const [isResizing, setIsResizing] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
   const [isLimitReached, setIsLimitReached] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(() => {
+    return localStorage.getItem('cospa_conversation_id');
+  });
+  const [userId, setUserId] = useState<string | null>(() => {
+    return localStorage.getItem('cospa_user_id');
+  });
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +143,37 @@ function App() {
 
       const result = await response.json();
       console.log('✅ User synced successfully:', result);
+      
+      // Store user_id for conversation tracking
+      setUserId(result.user_id);
+      localStorage.setItem('cospa_user_id', result.user_id);
+      
+      // Fetch existing conversations
+      const existingConvs = await getUserConversations(result.user_id);
+      console.log('📋 Fetched conversations:', existingConvs);
+      setConversations(existingConvs);
+      
+      // Auto-create first conversation only if no conversations exist and no stored conversation_id
+      if (existingConvs.length === 0 && !conversationId) {
+        try {
+          const newConvId = await createConversation(result.user_id);
+          setConversationId(newConvId);
+          localStorage.setItem('cospa_conversation_id', newConvId);
+          console.log('✅ Conversation created:', newConvId);
+          // Refresh conversations list
+          const updated = await getUserConversations(result.user_id);
+          setConversations(updated);
+        } catch (error: any) {
+          console.error('❌ Failed to create conversation:', error);
+          if (error.message.includes('giới hạn')) {
+            alert('Bạn đã đạt giới hạn 3 cuộc hội thoại. Vui lòng xóa cuộc hội thoại cũ.');
+          }
+        }
+      } else if (existingConvs.length > 0 && !conversationId) {
+        // Use the most recent conversation
+        setConversationId(existingConvs[0].id);
+        localStorage.setItem('cospa_conversation_id', existingConvs[0].id);
+      }
     } catch (error) {
       console.error('❌ Failed to sync user:', error);
     }
@@ -198,7 +238,9 @@ function App() {
       const { reply, locations: newLocations } = await sendMessageToGemini(
         userMessage.content, 
         history,
-        mapCenter // Pass current map center as user location
+        mapCenter, // Pass current map center as user location
+        conversationId || undefined, // Pass conversation ID if user is authenticated
+        userId || undefined // Pass user ID if authenticated
       );
 
       const botMessage: Message = {
@@ -217,11 +259,44 @@ function App() {
         setMapCenter(newLocations[0].coordinates);
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Chat error:', error);
+      
+      let errorContent = "Xin lỗi, hiện tại mình đang gặp sự cố kết nối.";
+      
+      // Check if it's a conversation limit error
+      if (error.message && error.message.includes('giới hạn')) {
+        errorContent = error.message;
+        
+        // Offer to create new conversation if limit reached
+        if (error.message.includes('10 tin nhắn') && userId) {
+          const createNew = confirm('Cuộc hội thoại đã đạt giới hạn 10 tin nhắn. Tạo cuộc hội thoại mới?');
+          if (createNew) {
+            try {
+              const newConvId = await createConversation(userId);
+              setConversationId(newConvId);
+              setMessages([{
+                id: 'welcome',
+                role: 'assistant',
+                content: 'Xin chào! Mình là CoSpa, trợ lý giúp bạn tìm kiếm không gian làm việc và quán cafe tốt nhất tại Việt Nam. Bạn đang tìm một chỗ yên tĩnh ở Hà Nội, hay một quán cafe sôi động ở Sài Gòn?',
+                timestamp: Date.now()
+              }]);
+              console.log('✅ New conversation created:', newConvId);
+              setLoading(false);
+              return; // Exit early, don't show error message
+            } catch (convError: any) {
+              if (convError.message.includes('giới hạn 3')) {
+                errorContent = 'Bạn đã đạt giới hạn 3 cuộc hội thoại. Vui lòng xóa cuộc hội thoại cũ để tạo mới.';
+              }
+            }
+          }
+        }
+      }
+      
       const errorMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting to the service right now.",
+        content: errorContent,
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -241,6 +316,89 @@ function App() {
     setMapCenter(loc.coordinates);
     if (window.innerWidth < 768) {
         setShowMapMobile(true);
+    }
+  };
+
+  const handleSelectConversation = async (id: string) => {
+    setConversationId(id);
+    localStorage.setItem('cospa_conversation_id', id);
+    
+    // Load messages from selected conversation
+    const conversationMessages = await getConversationMessages(id);
+    
+    if (conversationMessages.length > 0) {
+      setMessages(conversationMessages);
+      
+      // Extract and set locations from messages
+      const allLocations: LocationData[] = [];
+      conversationMessages.forEach(msg => {
+        if (msg.relatedLocations && msg.relatedLocations.length > 0) {
+          allLocations.push(...msg.relatedLocations);
+        }
+      });
+      
+      if (allLocations.length > 0) {
+        setLocations(allLocations);
+        setMapCenter(allLocations[allLocations.length - 1].coordinates);
+      }
+    } else {
+      // No messages, show welcome message
+      setMessages([{
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Xin chào! Mình là CoSpa, trợ lý giúp bạn tìm kiếm không gian làm việc và quán cafe tốt nhất tại Việt Nam. Bạn đang tìm một chỗ yên tĩnh ở Hà Nội, hay một quán cafe sôi động ở Sài Gòn?',
+        timestamp: Date.now()
+      }]);
+    }
+  };
+
+  const handleCreateConversation = async () => {
+    if (!userId) return;
+    try {
+      const newConvId = await createConversation(userId);
+      setConversationId(newConvId);
+      localStorage.setItem('cospa_conversation_id', newConvId);
+      // Refresh conversations list
+      const updated = await getUserConversations(userId);
+      setConversations(updated);
+      // Reset messages
+      setMessages([{
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Xin chào! Mình là CoSpa, trợ lý giúp bạn tìm kiếm không gian làm việc và quán cafe tốt nhất tại Việt Nam. Bạn đang tìm một chỗ yên tĩnh ở Hà Nội, hay một quán cafe sôi động ở Sài Gòn?',
+        timestamp: Date.now()
+      }]);
+    } catch (error: any) {
+      if (error.message.includes('giới hạn')) {
+        alert('Bạn đã đạt giới hạn 3 cuộc hội thoại. Vui lòng xóa cuộc hội thoại cũ để tạo mới.');
+      }
+    }
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    const success = await deleteConversation(id);
+    if (success && userId) {
+      // Refresh conversations list
+      const updated = await getUserConversations(userId);
+      setConversations(updated);
+      // If deleted current conversation, switch to another or create new
+      if (id === conversationId) {
+        if (updated.length > 0) {
+          handleSelectConversation(updated[0].id);
+        } else {
+          setConversationId(null);
+          localStorage.removeItem('cospa_conversation_id');
+        }
+      }
+    }
+  };
+
+  const handleUpdateConversationTitle = async (id: string, title: string) => {
+    const success = await updateConversationTitle(id, title);
+    if (success && userId) {
+      // Refresh conversations list
+      const updated = await getUserConversations(userId);
+      setConversations(updated);
     }
   };
 
@@ -297,6 +455,14 @@ function App() {
             </SignInButton>
           </SignedOut>
           <SignedIn>
+            <ConversationDropdown
+              conversations={conversations}
+              currentConversationId={conversationId}
+              onSelect={handleSelectConversation}
+              onCreate={handleCreateConversation}
+              onDelete={handleDeleteConversation}
+              onUpdateTitle={handleUpdateConversationTitle}
+            />
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
           <button 

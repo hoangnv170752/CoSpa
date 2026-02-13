@@ -6,7 +6,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 export const sendMessageToGemini = async (
   prompt: string,
   history: { role: string; parts: { text: string }[] }[],
-  userLocation?: Coordinates
+  userLocation?: Coordinates,
+  conversationId?: string,
+  userId?: string
 ): Promise<{ reply: string; locations: LocationData[] }> => {
   
   try {
@@ -24,6 +26,8 @@ export const sendMessageToGemini = async (
       },
       body: JSON.stringify({
         message: prompt,
+        conversation_id: conversationId,
+        user_id: userId,
         history: apiHistory,
         user_location: userLocation ? {
           lat: userLocation.lat,
@@ -33,7 +37,8 @@ export const sendMessageToGemini = async (
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `API Error: ${response.status}`);
     }
 
     const data = await response.json();
