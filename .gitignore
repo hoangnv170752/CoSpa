@@ -1,3 +1,5 @@
 .env
 db/data
 db/venv
+web/cospa-ui-design
+api/venv

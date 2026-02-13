@@ -241,7 +241,252 @@ Lưu trữ lịch sử tìm kiếm của người dùng.
 
 ---
 
+## 10. Chat_Conversations (Cuộc hội thoại)
+
+Lưu trữ các cuộc hội thoại chat của người dùng.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID cuộc hội thoại |
+| `user_id` | UUID | FOREIGN KEY → Users(id) | ID người dùng |
+| `title` | VARCHAR(255) | | Tiêu đề cuộc hội thoại |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+| `updated_at` | TIMESTAMP | DEFAULT NOW() | Thời gian cập nhật |
+| `is_active` | BOOLEAN | DEFAULT TRUE | Trạng thái |
+
+**Indexes:**
+- `idx_chat_conversations_user` on `user_id`
+- `idx_chat_conversations_created` on `created_at`
+
+---
+
+## 11. Chat_Messages (Tin nhắn chat)
+
+Lưu trữ các tin nhắn trong cuộc hội thoại.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID tin nhắn |
+| `conversation_id` | UUID | FOREIGN KEY → Chat_Conversations(id) | ID cuộc hội thoại |
+| `role` | VARCHAR(20) | NOT NULL | Vai trò (user/assistant) |
+| `content` | TEXT | NOT NULL | Nội dung tin nhắn |
+| `metadata` | JSON | | Metadata (intent, entities, etc.) |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+
+**Indexes:**
+- `idx_chat_messages_conversation` on `conversation_id`
+- `idx_chat_messages_created` on `created_at`
+
+---
+
+## 12. Chat_Search_Results (Kết quả tìm kiếm từ chat)
+
+Lưu trữ kết quả tìm kiếm được trả về trong chat.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID |
+| `message_id` | UUID | FOREIGN KEY → Chat_Messages(id) | ID tin nhắn |
+| `site_id` | UUID | FOREIGN KEY → Sites(id) | ID địa điểm |
+| `rank` | INTEGER | | Thứ tự hiển thị |
+| `relevance_score` | DECIMAL(5, 4) | | Điểm liên quan (0-1) |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+
+**Indexes:**
+- `idx_chat_search_message` on `message_id`
+- `idx_chat_search_site` on `site_id`
+
+---
+
+## 13. Advertising_Plans (Gói quảng cáo)
+
+Định nghĩa các gói quảng cáo có sẵn.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID gói |
+| `name` | VARCHAR(100) | NOT NULL | Tên gói (Basic, Premium, Enterprise) |
+| `description` | TEXT | | Mô tả gói |
+| `duration_days` | INTEGER | NOT NULL | Số ngày hiệu lực |
+| `price` | DECIMAL(10, 2) | NOT NULL | Giá gói |
+| `features` | JSON | | Tính năng (priority_boost, featured_badge, etc.) |
+| `max_sites` | INTEGER | | Số địa điểm tối đa |
+| `is_active` | BOOLEAN | DEFAULT TRUE | Trạng thái |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+
+**Indexes:**
+- `idx_advertising_plans_active` on `is_active`
+
+---
+
+## 14. Site_Advertisements (Quảng cáo địa điểm)
+
+Lưu trữ thông tin quảng cáo của từng địa điểm.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID quảng cáo |
+| `site_id` | UUID | FOREIGN KEY → Sites(id) | ID địa điểm |
+| `plan_id` | UUID | FOREIGN KEY → Advertising_Plans(id) | ID gói quảng cáo |
+| `owner_id` | UUID | FOREIGN KEY → Users(id) | ID chủ sở hữu |
+| `start_date` | TIMESTAMP | NOT NULL | Ngày bắt đầu |
+| `end_date` | TIMESTAMP | NOT NULL | Ngày kết thúc |
+| `status` | VARCHAR(20) | NOT NULL | Trạng thái (active, expired, cancelled) |
+| `priority_boost` | INTEGER | DEFAULT 0 | Độ ưu tiên hiển thị |
+| `is_featured` | BOOLEAN | DEFAULT FALSE | Hiển thị nổi bật |
+| `impressions` | INTEGER | DEFAULT 0 | Số lần hiển thị |
+| `clicks` | INTEGER | DEFAULT 0 | Số lần click |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+| `updated_at` | TIMESTAMP | DEFAULT NOW() | Thời gian cập nhật |
+
+**Indexes:**
+- `idx_site_ads_site` on `site_id`
+- `idx_site_ads_status` on `status`
+- `idx_site_ads_dates` on `start_date, end_date`
+- `idx_site_ads_owner` on `owner_id`
+
+---
+
+## 15. Payments (Thanh toán)
+
+Lưu trữ lịch sử thanh toán.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID thanh toán |
+| `advertisement_id` | UUID | FOREIGN KEY → Site_Advertisements(id) | ID quảng cáo |
+| `user_id` | UUID | FOREIGN KEY → Users(id) | ID người thanh toán |
+| `amount` | DECIMAL(10, 2) | NOT NULL | Số tiền |
+| `currency` | VARCHAR(3) | DEFAULT 'VND' | Loại tiền tệ |
+| `payment_method` | VARCHAR(50) | | Phương thức (card, bank_transfer, momo, etc.) |
+| `transaction_id` | VARCHAR(255) | UNIQUE | ID giao dịch từ payment gateway |
+| `status` | VARCHAR(20) | NOT NULL | Trạng thái (pending, completed, failed, refunded) |
+| `metadata` | JSON | | Thông tin bổ sung |
+| `paid_at` | TIMESTAMP | | Thời gian thanh toán |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+
+**Indexes:**
+- `idx_payments_user` on `user_id`
+- `idx_payments_advertisement` on `advertisement_id`
+- `idx_payments_status` on `status`
+- `idx_payments_transaction` on `transaction_id`
+
+---
+
+## 16. Contact_Requests (Yêu cầu liên hệ)
+
+Lưu trữ yêu cầu liên hệ từ người dùng đến địa điểm (có tính phí).
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID yêu cầu |
+| `user_id` | UUID | FOREIGN KEY → Users(id) | ID người dùng |
+| `site_id` | UUID | FOREIGN KEY → Sites(id) | ID địa điểm |
+| `message` | TEXT | | Nội dung liên hệ |
+| `contact_info` | JSON | | Thông tin liên hệ (phone, email) |
+| `status` | VARCHAR(20) | DEFAULT 'pending' | Trạng thái (pending, contacted, completed) |
+| `fee_charged` | DECIMAL(10, 2) | | Phí thu (nếu có) |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+| `responded_at` | TIMESTAMP | | Thời gian phản hồi |
+
+**Indexes:**
+- `idx_contact_requests_user` on `user_id`
+- `idx_contact_requests_site` on `site_id`
+- `idx_contact_requests_status` on `status`
+
+---
+
+## 17. Site_Notes (Ghi chú cá nhân)
+
+Lưu trữ ghi chú cá nhân của người dùng về các địa điểm.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | ID ghi chú |
+| `user_id` | UUID | FOREIGN KEY → Users(id) | ID người dùng |
+| `site_id` | UUID | FOREIGN KEY → Sites(id) | ID địa điểm |
+| `session_id` | VARCHAR(255) | | Session ID (cho người dùng chưa đăng nhập) |
+| `title` | VARCHAR(255) | | Tiêu đề ghi chú |
+| `content` | TEXT | NOT NULL | Nội dung ghi chú |
+| `tags` | JSON | | Tags/nhãn (wifi, quiet, outdoor, etc.) |
+| `visit_date` | DATE | | Ngày ghé thăm |
+| `rating_personal` | INTEGER | CHECK (rating_personal >= 1 AND rating_personal <= 5) | Đánh giá cá nhân (1-5) |
+| `is_private` | BOOLEAN | DEFAULT TRUE | Riêng tư hay công khai |
+| `images` | JSON | | Mảng URL ảnh đính kèm |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Thời gian tạo |
+| `updated_at` | TIMESTAMP | DEFAULT NOW() | Thời gian cập nhật |
+
+**Indexes:**
+- `idx_site_notes_user` on `user_id`
+- `idx_site_notes_site` on `site_id`
+- `idx_site_notes_session` on `session_id`
+- `idx_site_notes_created` on `created_at`
+
+**Notes:**
+- Hỗ trợ cả user đã đăng nhập (`user_id`) và chưa đăng nhập (`session_id`)
+- Session-based notes lưu trong browser localStorage
+- Tags giúp tổ chức và tìm kiếm ghi chú
+- Personal rating riêng biệt với public rating
+- Images cho phép user lưu ảnh riêng của họ
+
+---
+
+## Relationships (Updated)
+
+### One-to-Many
+- `Users` → `Sites` (created_by)
+- `Users` → `Reviews`
+- `Users` → `Check_Ins`
+- `Users` → `Site_Images` (uploaded_by)
+- `Users` → `Search_History`
+- `Users` → `Chat_Conversations`
+- `Users` → `Site_Advertisements` (owner_id)
+- `Users` → `Payments`
+- `Users` → `Contact_Requests`
+- `Users` → `Site_Notes`
+- `Sites` → `Reviews`
+- `Sites` → `Check_Ins`
+- `Sites` → `Site_Images`
+- `Sites` → `Site_Advertisements`
+- `Sites` → `Chat_Search_Results`
+- `Sites` → `Contact_Requests`
+- `Sites` → `Site_Notes`
+- `Categories` → `Categories` (parent_id - self-referencing)
+- `Chat_Conversations` → `Chat_Messages`
+- `Chat_Messages` → `Chat_Search_Results`
+- `Advertising_Plans` → `Site_Advertisements`
+- `Site_Advertisements` → `Payments`
+
+### Many-to-Many
+- `Sites` ↔ `Categories` (through `Site_Categories`)
+- `Users` ↔ `Sites` (through `Favorites`)
+
+---
+
 ## Notes
+
+### Chat-Based Search Features
+- Sử dụng NLP để phân tích intent và entities từ tin nhắn người dùng
+- Lưu trữ context cuộc hội thoại để cải thiện kết quả tìm kiếm
+- Tracking relevance score để tối ưu thuật toán ranking
+- Metadata trong Chat_Messages lưu thông tin như: detected_intent, extracted_filters, user_location
+
+### Personal Note-Taking Features
+- **Session-based notes**: Users không cần đăng nhập, notes lưu theo session_id
+- **Rich content**: Title, content, tags, personal rating, visit date
+- **Photo attachments**: Users có thể đính kèm ảnh riêng
+- **Privacy control**: Notes mặc định là private, có thể share nếu muốn
+- **Tagging system**: Tổ chức notes theo tags (wifi, quiet, outdoor, good-coffee, etc.)
+- **Personal vs Public rating**: Rating cá nhân riêng biệt với rating công khai
+- **Quick access**: Xem lại notes khi search lại địa điểm đó
+- **Export/Sync**: Có thể export notes hoặc sync khi đăng nhập sau
+
+### Advertising & Monetization
+- **Priority Boost**: Địa điểm quảng cáo xuất hiện cao hơn trong kết quả tìm kiếm
+- **Featured Badge**: Hiển thị badge "Nổi bật" hoặc "Sponsored"
+- **Impressions & Clicks**: Tracking để tính phí theo CPM/CPC nếu cần
+- **Contact Fee**: Thu phí khi người dùng yêu cầu liên hệ trực tiếp với địa điểm
+- **Flexible Plans**: Hỗ trợ nhiều gói quảng cáo với tính năng khác nhau
 
 ### Spatial Queries
 - Sử dụng PostGIS extension cho PostgreSQL để tối ưu spatial queries
@@ -250,15 +495,26 @@ Lưu trữ lịch sử tìm kiếm của người dùng.
 
 ### Performance Optimization
 - Index trên các trường thường xuyên query (email, place_id, location)
-- Partition bảng lớn như Check_Ins, Search_History theo thời gian
+- Partition bảng lớn như Check_Ins, Search_History, Chat_Messages theo thời gian
 - Cache rating và review_count trong bảng Sites
+- Cache impressions và clicks trong Site_Advertisements
 
 ### Data Integrity
 - Cascade delete cho các bảng liên quan khi xóa User hoặc Site
 - Trigger để tự động cập nhật `updated_at`
 - Trigger để cập nhật `rating` và `review_count` trong Sites khi có review mới
+- Trigger để cập nhật `status` trong Site_Advertisements khi hết hạn
+- Trigger để tính toán impressions/clicks
 
 ### Security
 - Hash passwords nếu không dùng Clerk
 - Validate coordinates (lat: -90 to 90, lng: -180 to 180)
 - Sanitize user input để tránh SQL injection
+- Encrypt sensitive payment information
+- Rate limiting cho Contact_Requests để tránh spam
+
+### Business Logic
+- Tự động expire quảng cáo khi `end_date` qua
+- Tính phí liên hệ dựa trên gói quảng cáo của địa điểm
+- Tracking ROI cho chủ địa điểm (impressions, clicks, contacts)
+- Email notification khi quảng cáo sắp hết hạn
