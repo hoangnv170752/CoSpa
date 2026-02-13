@@ -6,3 +6,6 @@ qdrant-client==1.12.1
 sentence-transformers==3.3.1
 psycopg[binary]==3.3.2
 pydantic==2.10.5
+clerk-backend-api==1.5.0
+pyjwt==2.9.0
+cryptography>=43.0.1,<44.0.0

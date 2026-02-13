@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Map as MapIcon, X, Locate } from 'lucide-react';
+import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react';
 import { MapComponent } from './components/MapComponent';
 import { ChatBubble } from './components/ChatBubble';
 import { LocationCard } from './components/LocationCard';
@@ -11,6 +12,7 @@ import 'leaflet/dist/leaflet.css';
 const DEFAULT_CENTER: Coordinates = { lat: 21.0254, lng: 105.8564 };
 
 function App() {
+  const { user, isLoaded } = useUser();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -26,8 +28,116 @@ function App() {
   const [showMapMobile, setShowMapMobile] = useState(false);
   const [chatWidth, setChatWidth] = useState(60); // Percentage
   const [isResizing, setIsResizing] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Rate limiting for unauthenticated users
+  const DAILY_LIMIT = 3;
+  const STORAGE_KEY = 'cospa_request_count';
+  const DATE_KEY = 'cospa_request_date';
+
+  // Check and initialize rate limit on mount
+  useEffect(() => {
+    if (isLoaded && !user) {
+      const today = new Date().toDateString();
+      const storedDate = localStorage.getItem(DATE_KEY);
+      const storedCount = localStorage.getItem(STORAGE_KEY);
+
+      if (storedDate !== today) {
+        // New day, reset count
+        localStorage.setItem(DATE_KEY, today);
+        localStorage.setItem(STORAGE_KEY, '0');
+        setRequestCount(0);
+        setIsLimitReached(false);
+      } else {
+        // Same day, load count
+        const count = parseInt(storedCount || '0');
+        setRequestCount(count);
+        setIsLimitReached(count >= DAILY_LIMIT);
+      }
+    }
+  }, [isLoaded, user]);
+
+  const checkRateLimit = (): boolean => {
+    if (user) return true; // Authenticated users have no limit
+
+    const today = new Date().toDateString();
+    const storedDate = localStorage.getItem(DATE_KEY);
+    
+    // Reset if new day
+    if (storedDate !== today) {
+      localStorage.setItem(DATE_KEY, today);
+      localStorage.setItem(STORAGE_KEY, '0');
+      setRequestCount(0);
+      setIsLimitReached(false);
+      return true;
+    }
+
+    const count = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
+    
+    if (count >= DAILY_LIMIT) {
+      setIsLimitReached(true);
+      return false;
+    }
+
+    return true;
+  };
+
+  const incrementRequestCount = () => {
+    if (user) return; // Don't count for authenticated users
+
+    const newCount = requestCount + 1;
+    setRequestCount(newCount);
+    localStorage.setItem(STORAGE_KEY, newCount.toString());
+    
+    if (newCount >= DAILY_LIMIT) {
+      setIsLimitReached(true);
+    }
+  };
+
+  // Sync user data to backend when user signs in
+  useEffect(() => {
+    if (isLoaded && user) {
+      syncUserToBackend(user);
+    }
+  }, [isLoaded, user]);
+
+  const syncUserToBackend = async (clerkUser: any) => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      console.log('🔄 Syncing user to backend:', {
+        clerk_id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress,
+        full_name: clerkUser.fullName,
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clerk_id: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress,
+          full_name: clerkUser.fullName,
+          avatar_url: clerkUser.imageUrl,
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ User sync failed:', response.status, errorText);
+        throw new Error(`Sync failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ User synced successfully:', result);
+    } catch (error) {
+      console.error('❌ Failed to sync user:', error);
+    }
+  };
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -52,6 +162,18 @@ function App() {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
+    // Check rate limit for unauthenticated users
+    if (!checkRateLimit()) {
+      const limitMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Bạn đã sử dụng hết ${DAILY_LIMIT} lượt tìm kiếm miễn phí trong ngày hôm nay. Vui lòng đăng nhập để tiếp tục sử dụng không giới hạn! 🔐`,
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, limitMessage]);
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -64,6 +186,8 @@ function App() {
     setLoading(true);
 
     try {
+      // Increment request count for unauthenticated users
+      incrementRequestCount();
       // Prepare history for API
       const history = messages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
@@ -164,12 +288,24 @@ function App() {
            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">C</div>
            CoSpa
         </div>
-        <button 
-          onClick={() => setShowMapMobile(!showMapMobile)} 
-          className="md:hidden p-2 rounded-full bg-slate-100 text-slate-600"
-        >
-          {showMapMobile ? <X size={20} /> : <MapIcon size={20} />}
-        </button>
+        <div className="flex items-center gap-3">
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+                Đăng nhập
+              </button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+          <button 
+            onClick={() => setShowMapMobile(!showMapMobile)} 
+            className="md:hidden p-2 rounded-full bg-slate-100 text-slate-600"
+          >
+            {showMapMobile ? <X size={20} /> : <MapIcon size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -218,21 +354,27 @@ function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask for a place (e.g., 'Coworking space in Hanoi with good coffee')..."
-              className="w-full bg-slate-100 text-slate-800 rounded-2xl pl-5 pr-14 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-none shadow-sm"
+              placeholder={isLimitReached ? "Đã hết lượt tìm kiếm hôm nay. Vui lòng đăng nhập..." : "Hỏi về địa điểm (ví dụ: 'Coworking space ở Hà Nội có cà phê ngon')..."}
+              className="w-full bg-slate-100 text-slate-800 rounded-2xl pl-5 pr-14 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-none shadow-sm disabled:opacity-50"
               rows={1}
               style={{ minHeight: '56px' }}
+              disabled={isLimitReached}
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || loading}
+              disabled={!input.trim() || loading || isLimitReached}
               className="absolute right-2 top-2 bottom-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl p-3 transition-colors shadow-sm flex items-center justify-center"
             >
               <Send size={18} />
             </button>
           </div>
-          <div className="text-center mt-2 text-[10px] text-slate-400">
-             AI can make mistakes. Check important info.
+          <div className="text-center mt-2 text-[10px] text-slate-400 flex items-center justify-center gap-2">
+             <span>AI can make mistakes. Check important info.</span>
+             {!user && isLoaded && (
+               <span className={`font-medium ${isLimitReached ? 'text-red-500' : requestCount >= DAILY_LIMIT - 1 ? 'text-orange-500' : 'text-slate-500'}`}>
+                 • {requestCount}/{DAILY_LIMIT} lượt miễn phí
+               </span>
+             )}
           </div>
         </div>
       </div>

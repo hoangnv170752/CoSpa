@@ -3,7 +3,7 @@ FastAPI backend for CoSpa - Location discovery chat API
 Integrates with OpenAI GPT-4o (latest), Qdrant vector search, and PostgreSQL
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -13,6 +13,8 @@ from openai import OpenAI
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 import psycopg
+import jwt
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -51,8 +53,14 @@ DB_CONFIG = {
 }
 
 COLLECTION_NAME = "cospa_sites"
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
 
 # Pydantic models
+class UserSync(BaseModel):
+    clerk_id: str
+    email: str
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -294,6 +302,41 @@ async def health_check():
         "qdrant": "connected" if os.getenv("QDRANT_API_KEY") else "not configured",
         "postgres": "configured" if all(DB_CONFIG.values()) else "not configured"
     }
+
+@app.post("/api/users/sync")
+async def sync_user(user_data: UserSync):
+    """
+    Sync Clerk user data to PostgreSQL
+    Creates or updates user record
+    """
+    try:
+        with psycopg.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                # Upsert user data
+                cur.execute("""
+                    INSERT INTO users (clerk_id, email, full_name, avatar_url, updated_at)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (clerk_id) 
+                    DO UPDATE SET 
+                        email = EXCLUDED.email,
+                        full_name = EXCLUDED.full_name,
+                        avatar_url = EXCLUDED.avatar_url,
+                        updated_at = CURRENT_TIMESTAMP
+                    RETURNING id, clerk_id, email
+                """, (user_data.clerk_id, user_data.email, user_data.full_name, user_data.avatar_url))
+                
+                result = cur.fetchone()
+                conn.commit()
+                
+                return {
+                    "status": "success",
+                    "user_id": str(result[0]),
+                    "clerk_id": result[1],
+                    "email": result[2]
+                }
+    except Exception as e:
+        print(f"Error syncing user: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to sync user: {str(e)}")
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
