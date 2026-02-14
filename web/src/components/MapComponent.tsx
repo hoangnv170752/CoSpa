@@ -72,13 +72,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({ locations, center, o
       
       <MapUpdater center={center} locations={locations} />
 
-      {/* User Location Marker (Simulated) */}
       <Marker position={[center.lat, center.lng]} icon={L.divIcon({
         className: 'user-marker',
         html: `<div class="w-4 h-4 bg-indigo-600 rounded-full border-2 border-white shadow-lg relative"><div class="absolute -inset-2 bg-indigo-600 rounded-full opacity-20 animate-ping"></div></div>`,
         iconSize: [16, 16]
       })}>
-        <Popup>You are here</Popup>
+        <Popup>Bạn đang ở đây</Popup>
       </Marker>
 
       {locations.map((loc) => (

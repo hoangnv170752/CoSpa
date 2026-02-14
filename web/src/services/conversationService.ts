@@ -95,13 +95,17 @@ export const updateConversationTitle = async (conversationId: string, title: str
 
 export const getConversationMessages = async (conversationId: string): Promise<any[]> => {
   try {
+    console.log('🔄 Fetching messages for conversation:', conversationId);
     const response = await fetch(`${API_BASE_URL}/api/conversations/${conversationId}/messages`);
 
     if (!response.ok) {
+      console.error('❌ API response not OK:', response.status);
       throw new Error('Failed to fetch conversation messages');
     }
 
     const data = await response.json();
+    console.log('📦 API response data:', data);
+    console.log('📨 Messages array:', data.messages);
     return data.messages;
   } catch (error) {
     console.error('Error fetching conversation messages:', error);

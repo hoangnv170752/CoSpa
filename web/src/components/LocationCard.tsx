@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MapPin, Navigation, Phone, ExternalLink, Coffee, Briefcase, Building, BookOpen } from 'lucide-react';
+import { Star, MapPin, Navigation, ExternalLink, Coffee, Briefcase, Building, BookOpen } from 'lucide-react';
 import { LocationData } from '../types';
 
 interface LocationCardProps {
@@ -9,6 +9,19 @@ interface LocationCardProps {
 }
 
 export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, compact = false }) => {
+  
+  // Safe defaults for missing data
+  const safeLocation = {
+    ...location,
+    type: location.type || 'Cafe',
+    reviewCount: location.reviewCount || 0,
+    distance: location.distance || 'N/A',
+    amenities: location.amenities || [],
+    imageUrl: location.imageUrl && location.imageUrl.trim() !== '' 
+      ? location.imageUrl 
+      : 'https://via.placeholder.com/400x300?text=No+Image',
+    description: location.description || location.address || ''
+  };
   
   const getIcon = (type: string) => {
     switch (type) {
@@ -25,21 +38,21 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, c
     return (
       <div className="w-64 bg-white rounded-lg overflow-hidden cursor-pointer" onClick={onClick}>
         <div className="h-24 overflow-hidden relative">
-           <img src={location.imageUrl} alt={location.name} className="w-full h-full object-cover" />
-           {location.isSponsored && (
+           <img src={safeLocation.imageUrl} alt={safeLocation.name} className="w-full h-full object-cover" />
+           {safeLocation.isSponsored && (
             <span className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
               AD
             </span>
           )}
         </div>
         <div className="p-3">
-          <h3 className="font-bold text-slate-800 text-sm truncate">{location.name}</h3>
+          <h3 className="font-bold text-slate-800 text-sm truncate">{safeLocation.name}</h3>
           <div className="flex items-center text-xs text-slate-500 mt-1">
              <Star size={12} className="text-amber-400 fill-amber-400 mr-1" />
-             <span className="font-medium mr-1">{location.rating}</span>
-             <span>({location.reviewCount})</span>
+             <span className="font-medium mr-1">{safeLocation.rating}</span>
+             <span>({safeLocation.reviewCount})</span>
           </div>
-          <p className="text-xs text-slate-500 mt-2 truncate">{location.address}</p>
+          <p className="text-xs text-slate-500 mt-2 truncate">{safeLocation.address}</p>
         </div>
       </div>
     );
@@ -53,42 +66,42 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, c
     >
       <div className="relative md:w-1/3 h-32 md:h-auto overflow-hidden">
         <img 
-          src={location.imageUrl} 
-          alt={location.name} 
+          src={safeLocation.imageUrl} 
+          alt={safeLocation.name} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
         />
-        {location.isSponsored && (
+        {safeLocation.isSponsored && (
           <span className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
             Sponsored
           </span>
         )}
         <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded flex items-center">
-           {getIcon(location.type)}
-           <span className="ml-1">{location.type}</span>
+           {getIcon(safeLocation.type)}
+           <span className="ml-1">{safeLocation.type}</span>
         </div>
       </div>
 
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-start">
-            <h3 className="font-bold text-slate-900 text-lg">{location.name}</h3>
+            <h3 className="font-bold text-slate-900 text-lg">{safeLocation.name}</h3>
             <span className="text-indigo-600 font-medium text-xs bg-indigo-50 px-2 py-1 rounded-full whitespace-nowrap">
-              {location.distance} away
+              {safeLocation.distance} away
             </span>
           </div>
           
           <div className="flex items-center mt-1 mb-2">
             <Star size={14} className="text-amber-400 fill-amber-400" />
-            <span className="text-sm font-semibold ml-1 text-slate-800">{location.rating}</span>
-            <span className="text-xs text-slate-500 ml-1">({location.reviewCount} reviews)</span>
+            <span className="text-sm font-semibold ml-1 text-slate-800">{safeLocation.rating}</span>
+            <span className="text-xs text-slate-500 ml-1">({safeLocation.reviewCount} reviews)</span>
           </div>
 
           <p className="text-sm text-slate-600 line-clamp-2 mb-3">
-            {location.description || location.address}
+            {safeLocation.description}
           </p>
 
           <div className="flex flex-wrap gap-1 mb-3">
-            {location.amenities.slice(0, 3).map((amenity, idx) => (
+            {safeLocation.amenities.slice(0, 3).map((amenity, idx) => (
               <span key={idx} className="text-[10px] uppercase tracking-wider text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded">
                 {amenity}
               </span>

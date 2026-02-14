@@ -199,6 +199,33 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (conversationId && userId) {
+        console.log('🔄 Auto-loading messages for conversation:', conversationId);
+        const conversationMessages = await getConversationMessages(conversationId);
+        
+        if (conversationMessages.length > 0) {
+          setMessages(conversationMessages);
+          
+          const allLocations: LocationData[] = [];
+          conversationMessages.forEach(msg => {
+            if (msg.relatedLocations && msg.relatedLocations.length > 0) {
+              allLocations.push(...msg.relatedLocations);
+            }
+          });
+          
+          if (allLocations.length > 0) {
+            setLocations(allLocations);
+            setMapCenter(allLocations[allLocations.length - 1].coordinates);
+          }
+        }
+      }
+    };
+    
+    loadMessages();
+  }, [conversationId, userId]);
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
@@ -320,14 +347,18 @@ function App() {
   };
 
   const handleSelectConversation = async (id: string) => {
+    console.log('🎯 handleSelectConversation called with id:', id);
     setConversationId(id);
     localStorage.setItem('cospa_conversation_id', id);
     
     // Load messages from selected conversation
+    console.log('🔄 About to fetch messages...');
     const conversationMessages = await getConversationMessages(id);
+    console.log('📥 Loaded messages from conversation:', conversationMessages);
     
     if (conversationMessages.length > 0) {
       setMessages(conversationMessages);
+      console.log('✅ Messages set to state:', conversationMessages.length);
       
       // Extract and set locations from messages
       const allLocations: LocationData[] = [];
