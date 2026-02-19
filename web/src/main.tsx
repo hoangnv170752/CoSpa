@@ -7,6 +7,7 @@ import App from './App'
 import { AboutPage } from './pages/AboutPage'
 import { WiFiPage } from './pages/WiFiPage'
 import { SavedLocationsPage } from './pages/SavedLocationsPage'
+import { NotFoundPage } from './pages/NotFoundPage'
 
 const clerkPubKey = import.meta.env.VITE_PUBLIC_CLERK_PUBLISHABLE_KEY
 
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/about" element={<AboutPage />} />
           <Route path="/wifi" element={<WiFiPage />} />
           <Route path="/saved" element={<SavedLocationsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </ClerkProvider>
