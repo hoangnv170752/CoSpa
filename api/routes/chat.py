@@ -137,7 +137,7 @@ async def chat(request: ChatRequest):
                 phone_number=loc.get('phone_number'),
                 link_google=loc.get('link_google'),
                 link_web=loc.get('link_web'),
-                thumbnail_url=loc.get('thumbnail_url') or f"https://picsum.photos/400/300?random={hash(loc['id']) % 1000}",
+                thumbnail_url=loc.get('thumbnail_url') or "https://cdn.xanhsm.com/2025/02/13cba011-cafe-sang-sai-gon-4.jpg",
                 amenities=amenities,
                 isSponsored=False,  # Can be enhanced with actual sponsored data
                 description=f"Great {loc['type'].lower()} in {loc['address'].split(',')[-1].strip() if ',' in loc['address'] else 'Vietnam'}"

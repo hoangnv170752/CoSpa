@@ -14,22 +14,11 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  console.log('API Request:', {
-    method: config.method,
-    url: config.url,
-    data: config.data,
-    headers: config.headers
-  });
   return config;
 });
 
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', {
-      status: response.status,
-      data: response.data,
-      url: response.config.url
-    });
     return response;
   },
   (error) => {

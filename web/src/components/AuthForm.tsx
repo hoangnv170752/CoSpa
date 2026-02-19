@@ -54,17 +54,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ onOTPRequired }) => {
   useEffect(() => {
     const initializeGoogle = () => {
       if (window.google && !googleInitialized) {
-        console.log('Initializing Google OAuth...');
         window.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           callback: async (response) => {
             try {
               setError('');
               setLoading(true);
-              console.log('Google OAuth callback:', response);
-
               const result = await authAPI.googleAuth(response.credential);
-              console.log('Google auth successful:', result);
               login(result.user as { username?: string; email?: string }, result.token);
             } catch (error) {
               console.error('Google auth API error:', error);
@@ -130,18 +126,13 @@ const AuthForm: React.FC<AuthFormProps> = ({ onOTPRequired }) => {
     try {
       if (isLogin) {
         // Login user with username
-        console.log('Attempting login with:', { username: formData.username });
         const response = await authAPI.login(formData.username, formData.password);
-        console.log('Login successful:', response);
         login(response.user as { username?: string; email?: string }, response.token);
       } else {
         // Register user
-        console.log('Attempting registration with:', formData);
         const response = await authAPI.register(formData);
-        console.log('Registration successful:', response);
 
         // After successful registration, send OTP
-        console.log('Sending OTP to:', formData.email);
         await authAPI.sendOTP(formData.email);
         onOTPRequired(formData.email);
       }

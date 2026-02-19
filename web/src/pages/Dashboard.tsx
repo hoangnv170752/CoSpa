@@ -26,11 +26,8 @@ const Dashboard: React.FC = () => {
             setUserLocation(newLocation);
             localStorage.setItem('userLat', position.coords.latitude.toString());
             localStorage.setItem('userLng', position.coords.longitude.toString());
-            console.log('Location granted:', position.coords);
           },
-          (error) => {
-            console.log('Location permission denied or error:', error.message);
-          },
+          () => {},
           {
             enableHighAccuracy: true,
             timeout: 10000,
@@ -42,7 +39,6 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const handleFindAroundMe = () => {
-    console.log('Finding places around me...');
   };
 
   return (

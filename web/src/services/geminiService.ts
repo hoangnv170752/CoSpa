@@ -61,7 +61,7 @@ export const sendMessageToGemini = async (
       isSponsored: loc.isSponsored || false,
       isOpen: true, // Default to open
       description: loc.description,
-      imageUrl: loc.thumbnail_url || `https://picsum.photos/400/300?random=${Math.floor(Math.random() * 1000)}`,
+      imageUrl: loc.thumbnail_url || 'https://cdn.xanhsm.com/2025/02/13cba011-cafe-sang-sai-gon-4.jpg',
       phoneNumber: loc.phone_number,
       linkGoogle: loc.link_google,
       linkWeb: loc.link_web

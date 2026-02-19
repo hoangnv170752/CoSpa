@@ -1,14 +1,17 @@
-import React from 'react';
-import { Star, MapPin, Navigation, ExternalLink, Coffee, Briefcase, Building, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, MapPin, Navigation, ExternalLink, Coffee, Briefcase, Building, BookOpen, Heart } from 'lucide-react';
 import { LocationData } from '../types';
 
 interface LocationCardProps {
   location: LocationData;
   onClick: () => void;
   compact?: boolean;
+  onSave?: (locationId: string) => void;
+  isSaved?: boolean;
 }
 
-export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, compact = false }) => {
+export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, compact = false, onSave, isSaved = false }) => {
+  const [localSaved, setLocalSaved] = useState(isSaved);
   
   // Safe defaults for missing data
   const safeLocation = {
@@ -19,7 +22,7 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, c
     amenities: location.amenities || [],
     imageUrl: location.imageUrl && location.imageUrl.trim() !== '' 
       ? location.imageUrl 
-      : 'https://via.placeholder.com/400x300?text=No+Image',
+      : 'https://cdn.xanhsm.com/2025/02/13cba011-cafe-sang-sai-gon-4.jpg',
     description: location.description || location.address || ''
   };
   
@@ -33,11 +36,19 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, c
     }
   };
 
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocalSaved(!localSaved);
+    if (onSave) {
+      onSave(location.id);
+    }
+  };
+
   if (compact) {
     // Used inside map popups
     return (
-      <div className="w-64 bg-white rounded-lg overflow-hidden cursor-pointer" onClick={onClick}>
-        <div className="h-24 overflow-hidden relative">
+      <div className="w-64 bg-white rounded-lg overflow-hidden">
+        <div className="h-24 overflow-hidden relative cursor-pointer" onClick={onClick}>
            <img src={safeLocation.imageUrl} alt={safeLocation.name} className="w-full h-full object-cover" />
            {safeLocation.isSponsored && (
             <span className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
@@ -46,11 +57,29 @@ export const LocationCard: React.FC<LocationCardProps> = ({ location, onClick, c
           )}
         </div>
         <div className="p-3">
-          <h3 className="font-bold text-slate-800 text-sm truncate">{safeLocation.name}</h3>
-          <div className="flex items-center text-xs text-slate-500 mt-1">
-             <Star size={12} className="text-amber-400 fill-amber-400 mr-1" />
-             <span className="font-medium mr-1">{safeLocation.rating}</span>
-             <span>({safeLocation.reviewCount})</span>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 cursor-pointer" onClick={onClick}>
+              <h3 className="font-bold text-slate-800 text-sm truncate">{safeLocation.name}</h3>
+              <div className="flex items-center text-xs text-slate-500 mt-1">
+                <Star size={12} className="text-amber-400 fill-amber-400 mr-1" />
+                <span className="font-medium mr-1">{safeLocation.rating}</span>
+                <span>({safeLocation.reviewCount})</span>
+              </div>
+            </div>
+            <button
+              onClick={handleSave}
+              className={`flex-shrink-0 p-1.5 rounded-full transition-all ${
+                localSaved 
+                  ? 'bg-pink-100 text-pink-600 hover:bg-pink-200' 
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-pink-600'
+              }`}
+              title={localSaved ? 'Đã lưu' : 'Lưu địa điểm'}
+            >
+              <Heart 
+                size={16} 
+                className={localSaved ? 'fill-pink-600' : ''} 
+              />
+            </button>
           </div>
           <p className="text-xs text-slate-500 mt-2 truncate">{safeLocation.address}</p>
         </div>

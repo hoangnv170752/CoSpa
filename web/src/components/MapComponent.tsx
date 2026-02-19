@@ -35,6 +35,7 @@ interface MapComponentProps {
   locations: LocationData[];
   center: Coordinates;
   onLocationSelect: (loc: LocationData) => void;
+  onSaveLocation?: (locationId: string) => void;
 }
 
 // Helper to update map view when props change
@@ -57,7 +58,7 @@ const MapUpdater: React.FC<{ center: Coordinates; locations: LocationData[] }> =
   return null;
 };
 
-export const MapComponent: React.FC<MapComponentProps> = ({ locations, center, onLocationSelect }) => {
+export const MapComponent: React.FC<MapComponentProps> = ({ locations, center, onLocationSelect, onSaveLocation }) => {
   return (
     <MapContainer 
       center={[center.lat, center.lng]} 
@@ -90,7 +91,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({ locations, center, o
           }}
         >
           <Popup className="custom-popup p-0 rounded-lg overflow-hidden border-0">
-             <LocationCard location={loc} onClick={() => onLocationSelect(loc)} compact />
+             <LocationCard 
+               location={loc} 
+               onClick={() => onLocationSelect(loc)} 
+               compact 
+               onSave={onSaveLocation}
+             />
           </Popup>
         </Marker>
       ))}

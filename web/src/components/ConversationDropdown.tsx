@@ -23,7 +23,6 @@ export const ConversationDropdown: React.FC<ConversationDropdownProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
 
-  console.log('🔍 ConversationDropdown render:', { conversations, currentConversationId });
 
   const currentConv = conversations.find(c => c.id === currentConversationId);
 
@@ -138,7 +137,7 @@ export const ConversationDropdown: React.FC<ConversationDropdownProps> = ({
                             >
                               <Edit2 size={12} />
                             </button>
-                            <button
+                            {/* <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (confirm('Xóa cuộc hội thoại này?')) {
@@ -149,7 +148,7 @@ export const ConversationDropdown: React.FC<ConversationDropdownProps> = ({
                               title="Xóa"
                             >
                               <Trash2 size={12} />
-                            </button>
+                            </button> */}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">

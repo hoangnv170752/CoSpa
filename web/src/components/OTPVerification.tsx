@@ -32,7 +32,6 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({ email, onVerification
 
     try {
       const response = await authAPI.verifyOTP(email, otp);
-      console.log('OTP verification successful:', response);
 
       // If verification includes login token, log the user in
       if (response.token) {

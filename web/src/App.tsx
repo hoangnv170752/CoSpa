@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Map as MapIcon, X, Locate } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Send, Map as MapIcon, X, Locate, Info, Heart, MapPin, Crown } from 'lucide-react';
 import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react';
 import { MapComponent } from './components/MapComponent';
 import { ChatBubble } from './components/ChatBubble';
 import { LocationCard } from './components/LocationCard';
 import { ConversationDropdown } from './components/ConversationDropdown';
+import { UpgradeModal } from './components/UpgradeModal';
 import { sendMessageToGemini } from './services/geminiService';
 import { createConversation, getUserConversations, deleteConversation, updateConversationTitle, getConversationMessages, Conversation } from './services/conversationService';
 import { Message, LocationData, Coordinates } from './types';
@@ -28,7 +30,19 @@ function App() {
   const [locations, setLocations] = useState<LocationData[]>([]);
   const [mapCenter, setMapCenter] = useState<Coordinates>(DEFAULT_CENTER);
   const [showMapMobile, setShowMapMobile] = useState(false);
-  const [chatWidth, setChatWidth] = useState(60); // Percentage
+  const [chatWidth, setChatWidth] = useState(50);
+  const [showCityFilter, setShowCityFilter] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Supported cities with coordinates
+  const cities = [
+    { name: 'Hà Nội', lat: 21.0285, lng: 105.8542 },
+    { name: 'Quảng Ninh', lat: 21.0064, lng: 107.2925 },
+    { name: 'Hải Phòng', lat: 20.8449, lng: 106.6881 },
+    { name: 'TP. Hồ Chí Minh', lat: 10.8231, lng: 106.6297 }
+  ];
+
   const [isResizing, setIsResizing] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
   const [isLimitReached, setIsLimitReached] = useState(false);
@@ -39,8 +53,6 @@ function App() {
     return localStorage.getItem('cospa_user_id');
   });
   const [conversations, setConversations] = useState<Conversation[]>([]);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Rate limiting for unauthenticated users
   const DAILY_LIMIT = 3;
@@ -116,12 +128,6 @@ function App() {
   const syncUserToBackend = async (clerkUser: any) => {
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      console.log('🔄 Syncing user to backend:', {
-        clerk_id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress,
-        full_name: clerkUser.fullName,
-      });
-      
       const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
         method: 'POST',
         headers: {
@@ -142,7 +148,6 @@ function App() {
       }
 
       const result = await response.json();
-      console.log('✅ User synced successfully:', result);
       
       // Store user_id for conversation tracking
       setUserId(result.user_id);
@@ -150,7 +155,6 @@ function App() {
       
       // Fetch existing conversations
       const existingConvs = await getUserConversations(result.user_id);
-      console.log('📋 Fetched conversations:', existingConvs);
       setConversations(existingConvs);
       
       // Auto-create first conversation only if no conversations exist and no stored conversation_id
@@ -159,7 +163,6 @@ function App() {
           const newConvId = await createConversation(result.user_id);
           setConversationId(newConvId);
           localStorage.setItem('cospa_conversation_id', newConvId);
-          console.log('✅ Conversation created:', newConvId);
           // Refresh conversations list
           const updated = await getUserConversations(result.user_id);
           setConversations(updated);
@@ -194,7 +197,7 @@ function App() {
             lng: position.coords.longitude
           });
         },
-        (error) => console.log("Geolocation error (using default):", error)
+        () => {}
       );
     }
   }, []);
@@ -202,7 +205,6 @@ function App() {
   useEffect(() => {
     const loadMessages = async () => {
       if (conversationId && userId) {
-        console.log('🔄 Auto-loading messages for conversation:', conversationId);
         const conversationMessages = await getConversationMessages(conversationId);
         
         if (conversationMessages.length > 0) {
@@ -308,12 +310,11 @@ function App() {
                 content: 'Xin chào! Mình là CoSpa, trợ lý giúp bạn tìm kiếm không gian làm việc và quán cafe tốt nhất tại Việt Nam. Bạn đang tìm một chỗ yên tĩnh ở Hà Nội, hay một quán cafe sôi động ở Sài Gòn?',
                 timestamp: Date.now()
               }]);
-              console.log('✅ New conversation created:', newConvId);
               setLoading(false);
               return; // Exit early, don't show error message
             } catch (convError: any) {
               if (convError.message.includes('giới hạn 3')) {
-                errorContent = 'Bạn đã đạt giới hạn 3 cuộc hội thoại. Vui lòng xóa cuộc hội thoại cũ để tạo mới.';
+                errorContent = 'Bạn đã đạt giới hạn 3 cuộc hội thoại.\n\nVui lòng liên hệ admin để nâng cấp tài khoản và sử dụng không giới hạn cuộc hội thoại.';
               }
             }
           }
@@ -346,19 +347,48 @@ function App() {
     }
   };
 
+  const handleSaveLocation = async (locationId: string) => {
+    if (!userId) {
+      alert('Vui lòng đăng nhập để lưu địa điểm');
+      return;
+    }
+
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/saved-locations/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          site_id: locationId,
+        }),
+      });
+
+      if (response.ok) {
+        console.log('✅ Location saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving location:', error);
+    }
+  };
+
+  const handleCitySelect = (city: { name: string; lat: number; lng: number }) => {
+    setMapCenter({ lat: city.lat, lng: city.lng });
+    setShowCityFilter(false);
+  };
+
   const handleSelectConversation = async (id: string) => {
-    console.log('🎯 handleSelectConversation called with id:', id);
     setConversationId(id);
     localStorage.setItem('cospa_conversation_id', id);
     
     // Load messages from selected conversation
-    console.log('🔄 About to fetch messages...');
     const conversationMessages = await getConversationMessages(id);
-    console.log('📥 Loaded messages from conversation:', conversationMessages);
     
     if (conversationMessages.length > 0) {
       setMessages(conversationMessages);
-      console.log('✅ Messages set to state:', conversationMessages.length);
       
       // Extract and set locations from messages
       const allLocations: LocationData[] = [];
@@ -401,7 +431,7 @@ function App() {
       }]);
     } catch (error: any) {
       if (error.message.includes('giới hạn')) {
-        alert('Bạn đã đạt giới hạn 3 cuộc hội thoại. Vui lòng xóa cuộc hội thoại cũ để tạo mới.');
+        alert('Bạn đã đạt giới hạn 3 cuộc hội thoại.\n\nVui lòng liên hệ admin để nâng cấp tài khoản và sử dụng không giới hạn cuộc hội thoại.');
       }
     }
   };
@@ -478,6 +508,34 @@ function App() {
            CoSpa
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
+          >
+            <Crown size={16} />
+            <span className="hidden sm:inline">Nâng cấp</span>
+          </button>
+          <Link 
+            to="/saved" 
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+          >
+            <Heart size={16} />
+            <span className="hidden sm:inline">Đã lưu</span>
+          </Link>
+          {/* <Link 
+            to="/wifi" 
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            <MapIcon size={16} />
+            <span className="hidden sm:inline">WiFi</span>
+          </Link> */}
+          <Link 
+            to="/about" 
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            <Info size={16} />
+            <span className="hidden sm:inline">Giới thiệu</span>
+          </Link>
           <SignedOut>
             <SignInButton mode="modal">
               <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
@@ -494,7 +552,7 @@ function App() {
               onDelete={handleDeleteConversation}
               onUpdateTitle={handleUpdateConversationTitle}
             />
-            <UserButton afterSignOutUrl="/" />
+            <UserButton afterSignOutUrl="/about" />
           </SignedIn>
           <button 
             onClick={() => setShowMapMobile(!showMapMobile)} 
@@ -566,7 +624,7 @@ function App() {
             </button>
           </div>
           <div className="text-center mt-2 text-[10px] text-slate-400 flex items-center justify-center gap-2">
-             <span>AI can make mistakes. Check important info.</span>
+             <span>CoSpa có thể chưa thoả mãn hết yêu cầu của bạn, nhớ kiểm tra lại thông tin nha.</span>
              {!user && isLoaded && (
                <span className={`font-medium ${isLimitReached ? 'text-red-500' : requestCount >= DAILY_LIMIT - 1 ? 'text-orange-500' : 'text-slate-500'}`}>
                  • {requestCount}/{DAILY_LIMIT} lượt miễn phí
@@ -595,11 +653,40 @@ function App() {
             center={mapCenter} 
             onLocationSelect={(loc) => {
               setMapCenter(loc.coordinates);
-            }} 
+            }}
+            onSaveLocation={handleSaveLocation}
           />
           
           {/* Map Overlay Controls */}
-          <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+          <div className="absolute top-4 right-4 z-[1000] flex flex-row gap-2">
+             {/* City Filter */}
+             <div className="relative">
+               <button 
+                 onClick={() => setShowCityFilter(!showCityFilter)}
+                 className="bg-white p-2 rounded shadow-md text-slate-600 hover:text-indigo-600 flex items-center gap-2 min-w-[140px]"
+                 title="Chọn thành phố"
+               >
+                 <MapPin size={20} />
+                 <span className="text-sm font-medium">Thành phố</span>
+               </button>
+               
+               {showCityFilter && (
+                 <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 min-w-[200px] overflow-hidden">
+                   {cities.map((city) => (
+                     <button
+                       key={city.name}
+                       onClick={() => handleCitySelect(city)}
+                       className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors flex items-center gap-2 text-sm"
+                     >
+                       <MapPin size={16} className="text-indigo-600" />
+                       <span className="font-medium text-gray-700">{city.name}</span>
+                     </button>
+                   ))}
+                 </div>
+               )}
+             </div>
+
+             {/* My Location Button */}
              <button 
                onClick={() => {
                  navigator.geolocation.getCurrentPosition(p => 
@@ -607,7 +694,7 @@ function App() {
                  );
                }}
                className="bg-white p-2 rounded shadow-md text-slate-600 hover:text-indigo-600"
-               title="My Location"
+               title="Vị trí của tôi"
              >
                <Locate size={20} />
              </button>
@@ -620,7 +707,9 @@ function App() {
                 <div className="flex overflow-x-auto gap-2 pb-1">
                    {locations.map(loc => (
                       <div key={loc.id} className="flex-shrink-0 w-32 h-20 bg-slate-200 rounded overflow-hidden relative" onClick={() => setMapCenter(loc.coordinates)}>
-                         <img src={loc.imageUrl} className="w-full h-full object-cover opacity-80" alt="" />
+                         {loc.imageUrl && loc.imageUrl.trim() !== '' && (
+                           <img src={loc.imageUrl} className="w-full h-full object-cover opacity-80" alt="" />
+                         )}
                          <span className="absolute bottom-1 left-1 text-[10px] font-bold text-white shadow-black drop-shadow-md">{loc.name}</span>
                       </div>
                    ))}
@@ -631,6 +720,8 @@ function App() {
         </div>
       </div>
 
+      {/* Upgrade Modal */}
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
     </div>
   );
 }

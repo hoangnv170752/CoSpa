@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 from routes.users import router as users_router
 from routes.conversations import router as conversations_router
 from routes.chat import router as chat_router
+from routes.wifi import router as wifi_router
+from routes.saved_locations import router as saved_locations_router
+from routes.reviews import router as reviews_router
 
 # Load environment variables
 load_dotenv()
@@ -36,6 +39,9 @@ app.add_middleware(
 app.include_router(users_router)
 app.include_router(conversations_router)
 app.include_router(chat_router)
+app.include_router(wifi_router, prefix="/api/wifi", tags=["wifi"])
+app.include_router(saved_locations_router, prefix="/api/saved-locations", tags=["saved-locations"])
+app.include_router(reviews_router, prefix="/api/reviews", tags=["reviews"])
 
 # Health check endpoints
 @app.get("/")
