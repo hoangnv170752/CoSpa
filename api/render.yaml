@@ -4,6 +4,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    startCommand: uvicorn main:app --host 0.0.0.0
     envVars:
       - key: POSTGRES_HOST
         sync: false
