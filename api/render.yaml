@@ -4,7 +4,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    startCommand: uvicorn main:app --host 0.0.0.0
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: POSTGRES_HOST
         sync: false
@@ -24,4 +24,6 @@ services:
         sync: false
       - key: CLERK_SECRET_KEY
         sync: false
+      - key: PORT
+        value: 10000
     healthCheckPath: /health
