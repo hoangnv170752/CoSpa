@@ -43,17 +43,23 @@ const MapUpdater: React.FC<{ center: Coordinates; locations: LocationData[] }> =
   const map = useMap();
 
   useEffect(() => {
-    map.flyTo([center.lat, center.lng], 13, {
-      duration: 1.5
-    });
-  }, [center, map]);
+    if (!map) return;
 
-  useEffect(() => {
-    if (locations.length > 0) {
-      const bounds = L.latLngBounds(locations.map(l => [l.coordinates.lat, l.coordinates.lng]));
-      map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    try {
+      // Nếu có locations, fit bounds để hiển thị tất cả markers
+      if (locations.length > 0) {
+        const bounds = L.latLngBounds(locations.map(l => [l.coordinates.lat, l.coordinates.lng]));
+        map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 15, duration: 1.5 });
+      } else {
+        // Nếu không có locations, chỉ center vào vị trí hiện tại
+        map.flyTo([center.lat, center.lng], 13, { duration: 1.5 });
+      }
+    } catch (error) {
+      console.error('MapUpdater error:', error);
+      // Fallback: setView không có animation
+      map.setView([center.lat, center.lng], 13);
     }
-  }, [locations, map]);
+  }, [center.lat, center.lng, locations.length, map]);
 
   return null;
 };

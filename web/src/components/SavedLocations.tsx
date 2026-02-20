@@ -28,6 +28,8 @@ export const SavedLocations: React.FC = () => {
   useEffect(() => {
     if (user?.id) {
       fetchSavedLocations();
+    } else {
+      setIsLoading(false);
     }
   }, [user?.id]);
 
@@ -116,7 +118,7 @@ export const SavedLocations: React.FC = () => {
 
       {/* Locations Grid */}
       {locations.length > 0 ? (
-        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {locations.map((location) => (
             <div
               key={location.id}
@@ -187,12 +189,25 @@ export const SavedLocations: React.FC = () => {
       ) : (
         <div className="text-center py-12">
           <Heart size={48} className="mx-auto mb-3 text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Chưa có địa điểm nào được lưu
-          </h3>
-          <p className="text-gray-500 mb-4">
-            Bắt đầu lưu các địa điểm yêu thích của bạn để dễ dàng truy cập sau này
-          </p>
+          {!user ? (
+            <>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Vui lòng đăng nhập
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Đăng nhập để xem và quản lý các địa điểm đã lưu của bạn
+              </p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Chưa có địa điểm nào được lưu
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Bắt đầu lưu các địa điểm yêu thích của bạn để dễ dàng truy cập sau này
+              </p>
+            </>
+          )}
         </div>
       )}
 

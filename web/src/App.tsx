@@ -499,27 +499,27 @@ function App() {
   }, [isResizing]);
 
   return (
-    <div className="flex flex-col h-screen bg-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-white overflow-hidden touch-pan-y">
       
       {/* Header */}
-      <div className="h-16 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-4 md:px-6">
-        <div className="flex items-center gap-2 font-bold text-xl text-indigo-600">
-           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">C</div>
-           CoSpa
+      <div className="h-16 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-3 sm:px-4 md:px-6 flex-shrink-0">
+        <div className="flex items-center gap-2 font-bold text-lg sm:text-xl text-indigo-600">
+           <div className="w-7 h-7 sm:w-8 sm:h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm sm:text-base">C</div>
+           <span className="hidden xs:inline">CoSpa</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <button
             onClick={() => setShowUpgradeModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
           >
-            <Crown size={16} />
+            <Crown size={14} className="sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Nâng cấp</span>
           </button>
           <Link 
             to="/saved" 
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
           >
-            <Heart size={16} />
+            <Heart size={14} className="sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Đã lưu</span>
           </Link>
           {/* <Link 
@@ -531,14 +531,14 @@ function App() {
           </Link> */}
           <Link 
             to="/about" 
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
           >
-            <Info size={16} />
+            <Info size={14} className="sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Giới thiệu</span>
           </Link>
           <SignedOut>
             <SignInButton mode="modal">
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm font-medium">
                 Đăng nhập
               </button>
             </SignInButton>
@@ -556,7 +556,8 @@ function App() {
           </SignedIn>
           <button 
             onClick={() => setShowMapMobile(!showMapMobile)} 
-            className="md:hidden p-2 rounded-full bg-slate-100 text-slate-600"
+            className="lg:hidden p-2 rounded-lg bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors"
+            title={showMapMobile ? "Xem Chat" : "Xem Bản đồ"}
           >
             {showMapMobile ? <X size={20} /> : <MapIcon size={20} />}
           </button>
@@ -567,12 +568,12 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* Chat Area */}
         <div 
-          className={`flex flex-col ${showMapMobile ? 'hidden md:flex' : 'flex'}`}
-          style={{ width: window.innerWidth >= 768 ? `${chatWidth}%` : '100%' }}
+          className={`flex flex-col ${showMapMobile ? 'hidden lg:flex' : 'flex'}`}
+          style={{ width: window.innerWidth >= 1024 ? `${chatWidth}%` : '100%' }}
         >
         
         {/* Messages List */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 bg-slate-50 scroll-smooth overscroll-contain">
           <div className="max-w-3xl mx-auto">
             {messages.map((msg) => (
               <div key={msg.id}>
@@ -603,16 +604,16 @@ function App() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-white border-t border-gray-200">
+        <div className="p-3 sm:p-4 bg-white border-t border-gray-200 flex-shrink-0">
           <div className="max-w-3xl mx-auto relative">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isLimitReached ? "Đã hết lượt tìm kiếm hôm nay. Vui lòng đăng nhập..." : "Hỏi về địa điểm (ví dụ: 'Coworking space ở Hà Nội có cà phê ngon')..."}
-              className="w-full bg-slate-100 text-slate-800 rounded-2xl pl-5 pr-14 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-none shadow-sm disabled:opacity-50"
+              className="w-full bg-slate-100 text-slate-800 rounded-2xl pl-4 sm:pl-5 pr-12 sm:pr-14 py-3 sm:py-4 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all resize-none shadow-sm disabled:opacity-50"
               rows={1}
-              style={{ minHeight: '56px' }}
+              style={{ minHeight: '48px' }}
               disabled={isLimitReached}
             />
             <button
@@ -634,9 +635,9 @@ function App() {
         </div>
       </div>
 
-      {/* Resizable Divider - Desktop only */}
+      {/* Resizable Divider - Desktop only (>= 1024px) */}
       <div 
-        className="hidden md:block w-1 bg-gray-200 hover:bg-indigo-400 cursor-col-resize transition-colors relative group"
+        className="hidden lg:block w-1 bg-gray-200 hover:bg-indigo-400 cursor-col-resize transition-colors relative group"
         onMouseDown={handleMouseDown}
       >
         <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-indigo-100 opacity-0 group-hover:opacity-50 transition-opacity"></div>
@@ -644,8 +645,8 @@ function App() {
 
       {/* Map Area */}
       <div 
-        className={`border-l border-gray-200 relative ${showMapMobile ? 'flex flex-col flex-1' : 'hidden md:flex md:flex-col'}`}
-        style={{ width: window.innerWidth >= 768 ? `${100 - chatWidth}%` : '100%' }}
+        className={`border-l border-gray-200 relative ${showMapMobile ? 'flex flex-col flex-1' : 'hidden lg:flex lg:flex-col'}`}
+        style={{ width: window.innerWidth >= 1024 ? `${100 - chatWidth}%` : '100%' }}
       >
         <div className="flex-1 relative bg-slate-100">
           <MapComponent 
