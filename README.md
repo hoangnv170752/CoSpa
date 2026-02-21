@@ -1,10 +1,14 @@
 # CoSpa - AI-Powered Workspace Discovery Platform
 
+<a href="https://unikorn.vn/p/cospa-ai?ref=embed" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/cospa-ai/rank?theme=light&type=daily" alt="CoSpa - Hàng ngày" style="width: 250px; height: 64px;" width="250" height="64" /></a>
+<a href="https://unikorn.vn/p/cospa-ai?ref=embed" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/cospa-ai?theme=light" alt="CoSpa trên Unikorn.vn" style="width: 256px; height: 64px;" width="256" height="64" /></a>
+
 CoSpa is an intelligent location discovery platform that helps users find the perfect workspaces, cafes, and coworking spaces across Vietnam. Built with AI-powered chat interface and semantic search capabilities.
 
 ## 🌟 Features
 
 ### Core Features
+
 - **AI Chat Assistant**: Natural language conversation to discover locations based on user preferences
 - **Semantic Search**: Powered by Qdrant vector database for intelligent location matching
 - **Interactive Map**: Real-time location visualization with Leaflet
@@ -13,13 +17,15 @@ CoSpa is an intelligent location discovery platform that helps users find the pe
 - **City Navigation**: Quick filters for major cities (Hanoi, Quang Ninh, Hai Phong, Ho Chi Minh City)
 
 ### User Tiers
+
 - **Free Tier**:
+
   - 3 conversation limit
   - 10 messages per conversation
   - 1 review per location
   - Public reviews (name & email displayed)
-  
 - **Premium Tier** (99,000đ one-time):
+
   - Unlimited conversations
   - Unlimited messages
   - Anonymous reviews
@@ -27,6 +33,7 @@ CoSpa is an intelligent location discovery platform that helps users find the pe
   - Early access to new features
 
 ### Review System
+
 - Star rating (1-5)
 - Text comments about quality, WiFi, staff attitude
 - User information display for free users
@@ -36,6 +43,7 @@ CoSpa is an intelligent location discovery platform that helps users find the pe
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **React** + **TypeScript** + **Vite**
 - **Tailwind CSS** for styling
 - **Leaflet** for interactive maps
@@ -43,6 +51,7 @@ CoSpa is an intelligent location discovery platform that helps users find the pe
 - **Lucide React** for icons
 
 ### Backend
+
 - **FastAPI** (Python 3.11+)
 - **PostgreSQL** for data storage
 - **Qdrant** for vector search
@@ -50,6 +59,7 @@ CoSpa is an intelligent location discovery platform that helps users find the pe
 - **psycopg** for database connections
 
 ### Infrastructure
+
 - **Database**: PostgreSQL with UUID primary keys
 - **Vector DB**: Qdrant for semantic search
 - **Authentication**: Clerk
@@ -85,6 +95,7 @@ CoSpa/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Python 3.11+
 - Node.js 18+
 - PostgreSQL 14+
@@ -95,6 +106,7 @@ CoSpa/
 ### Backend Setup
 
 1. **Install dependencies**:
+
 ```bash
 cd api
 python -m venv venv
@@ -103,6 +115,7 @@ pip install -r requirements.txt
 ```
 
 2. **Configure environment** (`.env`):
+
 ```env
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -118,6 +131,7 @@ CLERK_SECRET_KEY=your_clerk_secret
 ```
 
 3. **Run migrations**:
+
 ```bash
 psql -U postgres -d cospa -f db/migrations/001_initial_schema.sql
 psql -U postgres -d cospa -f db/migrations/006_create_reviews_table.sql
@@ -125,6 +139,7 @@ psql -U postgres -d cospa -f db/migrations/007_add_user_info_to_reviews.sql
 ```
 
 4. **Start server**:
+
 ```bash
 python main.py
 # Server runs on http://localhost:8000
@@ -133,18 +148,21 @@ python main.py
 ### Frontend Setup
 
 1. **Install dependencies**:
+
 ```bash
 cd web
 npm install
 ```
 
 2. **Configure environment** (`.env`):
+
 ```env
 VITE_API_BASE_URL=http://localhost:8000
 VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
 ```
 
 3. **Start development server**:
+
 ```bash
 npm run dev
 # App runs on http://localhost:5173
@@ -153,6 +171,7 @@ npm run dev
 ## 📊 Database Schema
 
 ### Key Tables
+
 - **users**: User profiles from Clerk
 - **sites**: Workspace/cafe locations with coordinates
 - **chat_conversations**: User conversation threads
@@ -163,33 +182,39 @@ npm run dev
 ## 🎯 Key Implementations
 
 ### 1. Conversation Limits
+
 - Free users: Max 3 conversations, 10 messages each
 - Backend validation with clear error messages
 - UI prompts to upgrade when limits reached
 
 ### 2. Review System
+
 - One review per user per location (database constraint)
 - Free users: Name & email displayed
 - Premium users: Optional anonymous reviews
 - Star ratings with text comments
 
 ### 3. Semantic Search
+
 - Qdrant vector embeddings for location matching
 - Natural language query understanding
 - Context-aware location recommendations
 
 ### 4. Database Backups
+
 - Automated daily backups via cron
 - 3-day retention policy
 - Compressed archives with timestamps
 
 ## 🔐 Security Features
+
 - Clerk authentication integration
 - User UUID-based access control
 - SQL injection prevention with parameterized queries
 - CORS configuration for API security
 
 ## 💳 Payment Integration
+
 - QR code payment options (International & Vietnam Banking)
 - Manual verification process
 - 24-hour upgrade turnaround
@@ -197,12 +222,14 @@ npm run dev
 ## 📝 API Documentation
 
 Once the server is running, visit:
+
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
 ## 🤝 Contributing
 
 This is a personal project for the Amazon Nova AI Hackathon. For inquiries:
+
 - **Zalo**: 0354530616
 - **Email**: hoang.nv.ral@gmail.com
 
@@ -213,6 +240,7 @@ All rights reserved © 2026 CoSpa
 ## 🏆 Hackathon Submission
 
 Built for Amazon Nova AI Hackathon - Agentic AI Category
+
 - Multi-agent architecture for location discovery
 - Amazon Nova integration for embeddings and chat
 - Enterprise-ready solution for media companies
